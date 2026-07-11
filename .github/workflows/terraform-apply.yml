@@ -45,6 +45,9 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: us-east-2
 
+      - name: generate tfvars from config
+        run: python3 scripts/bootstrap.py ${{ inputs.environment }} --generate-only
+
       - name: init
         run: terraform -chdir=terraform/envs/${{ inputs.environment }} init -input=false
 

@@ -60,6 +60,9 @@ export AWS_ENDPOINT_URL="http://127.0.0.1:${PORT}"
 
 mkdir -p "$TFDIR/test"
 
+# Generate this env's tfvars from scripts/config.toml (there are no defaults without it).
+python3 "$REPO/scripts/bootstrap.py" "$ENV" --generate-only
+
 # Neutralize the S3 backend for local testing: an override file (gitignored via
 # *_override.tf) swaps it for a local backend so no real AWS is ever touched.
 cat > "$OVERRIDE" <<'EOF'

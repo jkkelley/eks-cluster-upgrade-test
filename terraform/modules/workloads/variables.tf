@@ -1,7 +1,8 @@
+# No defaults - values are threaded from the stack (ultimately scripts/config.toml).
+
 variable "enable_planted_gotchas" {
-  description = "Apply the planted gotcha manifests as part of terraform apply. Default off - prefer `make seed` after the cluster is up, so the base infra apply stays free of live-cluster coupling."
+  description = "Apply the planted gotcha manifests during terraform apply. Prefer `make seed` and keep this false."
   type        = bool
-  default     = false
 }
 
 variable "manifests_path" {

@@ -1,31 +1,17 @@
-variable "aws_region" {
-  type    = string
-  default = "us-east-2"
-}
+# No defaults - values come from scripts/config.toml [bootstrap_oidc] via
+# `python3 scripts/bootstrap.py bootstrap-oidc ...`.
 
-variable "github_owner" {
-  type    = string
-  default = "jkkelley"
-}
-
-variable "github_repo" {
-  type    = string
-  default = "eks-cluster-upgrade-test"
-}
-
-variable "role_name" {
-  type    = string
-  default = "gha-eks-upgrade-test"
-}
+variable "aws_region" { type = string }
+variable "github_owner" { type = string }
+variable "github_repo" { type = string }
+variable "role_name" { type = string }
 
 variable "subject_claims" {
-  description = "Allowed OIDC sub claims. Empty = repo:<owner>/<repo>:* (any branch/env). Tighten to e.g. repo:owner/repo:environment:prod for real use."
+  description = "Allowed OIDC sub claims. Empty list = repo:<owner>/<repo>:* (any branch/env)."
   type        = list(string)
-  default     = []
 }
 
 variable "managed_policy_arns" {
-  description = "Policies attached to the CI role. AdministratorAccess by default so the test 'just works' - SCOPE THIS DOWN for anything real."
+  description = "Policies attached to the CI role. Scope down from AdministratorAccess for real use."
   type        = list(string)
-  default     = ["arn:aws:iam::aws:policy/AdministratorAccess"]
 }

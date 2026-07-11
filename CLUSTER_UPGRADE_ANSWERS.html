@@ -199,7 +199,7 @@ aws eks describe-addon-versions --addon-name kube-proxy \
 aws eks update-addon --cluster-name &lt;c&gt; --addon-name kube-proxy   --addon-version &lt;v&gt; --resolve-conflicts OVERWRITE
 aws eks update-addon --cluster-name &lt;c&gt; --addon-name coredns      --addon-version &lt;v&gt;
 aws eks update-addon --cluster-name &lt;c&gt; --addon-name vpc-cni      --addon-version &lt;v&gt;
-# Terraform way: set addon_versions = { kube-proxy = "&lt;v&gt;", ... } and apply</pre>
+# Config way: set addon_versions in scripts/config.toml, then `make apply`</pre>
       </div>
 
       <div class="card" id="g-kubeproxy">
@@ -494,9 +494,9 @@ kubectl get pods -A -o json | jq -r '.items[] | select(.metadata.ownerReferences
 aws eks update-cluster-version --name <c> --kubernetes-version 1.35
 aws eks update-nodegroup-version --cluster-name <c> --nodegroup-name <ng>
 
-## this repo's terraform way (parameterized)
-cluster_version = "1.35"        # then apply -> upgrades control plane
-node_version    = "1.35"        # then apply -> rolls nodes
+## this repo's config way (edit scripts/config.toml, then `make apply ENV=dev`)
+cluster_version = "1.35"        # upgrades the control plane
+node_version    = "1.35"        # rolls the nodes
 addon_versions  = { kube-proxy = "<v>", coredns = "<v>", vpc-cni = "<v>" }</pre>
     </section>
 

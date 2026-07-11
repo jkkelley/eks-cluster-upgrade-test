@@ -149,7 +149,7 @@ resource "helm_release" "cluster_autoscaler" {
   name             = "cluster-autoscaler"
   repository       = "https://kubernetes.github.io/autoscaler"
   chart            = "cluster-autoscaler"
-  version          = var.cluster_autoscaler_chart_version
+  version          = var.cluster_autoscaler_chart_version == "" ? null : var.cluster_autoscaler_chart_version
   namespace        = "kube-system"
   create_namespace = false
 
@@ -194,7 +194,7 @@ resource "helm_release" "metrics_server" {
   name       = "metrics-server"
   repository = "https://kubernetes-sigs.github.io/metrics-server/"
   chart      = "metrics-server"
-  version    = var.metrics_server_chart_version
+  version    = var.metrics_server_chart_version == "" ? null : var.metrics_server_chart_version
   namespace  = "kube-system"
 }
 
@@ -206,7 +206,7 @@ resource "helm_release" "cert_manager" {
   name             = "cert-manager"
   repository       = "https://charts.jetstack.io"
   chart            = "cert-manager"
-  version          = var.cert_manager_chart_version
+  version          = var.cert_manager_chart_version == "" ? null : var.cert_manager_chart_version
   namespace        = "cert-manager"
   create_namespace = true
 

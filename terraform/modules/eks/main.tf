@@ -119,9 +119,9 @@ resource "aws_eks_node_group" "this" {
   node_role_arn   = aws_iam_role.node.arn
   subnet_ids      = var.node_subnet_ids
 
-  # null on purpose: node group is created at the cluster version, then LAGS the
-  # control plane on upgrade (the kubelet-skew lesson). Set node_version to roll nodes.
-  version = var.node_version
+  # Empty string -> null (omit): node group is created at the cluster version, then
+  # LAGS the control plane on upgrade (the kubelet-skew lesson). Set node_version to roll.
+  version = var.node_version == "" ? null : var.node_version
 
   scaling_config {
     desired_size = var.node_desired_size

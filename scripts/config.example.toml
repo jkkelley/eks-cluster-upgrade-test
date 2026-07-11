@@ -1,0 +1,97 @@
+# =============================================================================
+# CONFIG TEMPLATE - the single source of truth for every Terraform variable.
+#
+# HOW TO USE (hand-off friendly):
+#   1. cp scripts/config.example.toml scripts/config.toml
+#   2. edit scripts/config.toml for your account/needs
+#   3. make up ENV=dev        (bootstrap.py reads it and generates the tfvars)
+#
+# If you skip step 1, bootstrap.py falls back to THIS example, so a fresh clone
+# still runs out of the box. There are NO defaults in any variables.tf - values
+# live here only. Edit something under [common] and it applies to BOTH envs;
+# [dev]/[prod] hold only the per-environment differences.
+#
+# Each line notes a GENERIC default so you know what a sane value looks like.
+# =============================================================================
+
+[common]
+# ---- identity / region ----
+aws_region  = "us-east-2"          # region for everything;            generic default: "us-east-1"
+aws_profile = "your-aws-profile"    # kubeconfig hint only (auth = AWS_PROFILE env); generic default: "default"
+project     = "eks-upgrade"        # name prefix for resources;        generic default: "my-eks"
+
+# ---- the upgrade lever (bump ONE minor at a time: 1.34 -> 1.35 -> 1.36) ----
+cluster_version = "1.34"           # EKS/k8s minor;                    generic default: latest standard-support minor
+
+# ---- networking ----
+vpc_cidr             = "10.0.0.0/16"                   # VPC CIDR;                generic default: "10.0.0.0/16"
+az_count             = 2                               # AZs to spread across;    generic default: 3
+public_subnet_cidrs  = ["10.0.0.0/24", "10.0.1.0/24"] # one per AZ;              generic default: three /20s
+private_subnet_cidrs = ["10.0.16.0/24", "10.0.17.0/24"] # small on purpose here; generic default: three /20s
+node_subnet_tier     = "private"                      # "private" (needs NAT) | "public"; generic default: "private"
+enable_nat_gateway   = true                            # egress for private nodes; generic default: true
+single_nat_gateway   = true                            # one shared NAT (cheaper); generic default: false (one per AZ)
+enable_vpc_endpoints = false                           # ECR/S3/STS/EC2 endpoints; generic default: false
+
+# ---- control plane ----
+endpoint_public_access                      = true                 # public API endpoint;      generic default: true
+endpoint_private_access                     = true                 # private API endpoint;     generic default: true
+public_access_cidrs                         = ["0.0.0.0/0"]        # who can reach the API;    generic default: ["<your-office-cidr>"]
+enabled_cluster_log_types                   = []                   # [] off (cheap);           generic default: ["api","audit","authenticator"]
+authentication_mode                         = "API_AND_CONFIG_MAP" # CONFIG_MAP|API|API_AND_CONFIG_MAP; generic default: "API"
+bootstrap_cluster_creator_admin_permissions = true                 # give the applier admin;   generic default: true
+access_entries                              = {}                   # extra IAM principals;     generic default: {} (add as needed)
+
+# ---- node group ----
+node_instance_types  = ["t3.medium"]              # instance types;   generic default: ["m5.large"]
+capacity_type        = "SPOT"                     # SPOT | ON_DEMAND; generic default: "ON_DEMAND"
+ami_type             = "AL2023_x86_64_STANDARD"   # node AMI family;  generic default: "AL2023_x86_64_STANDARD"
+node_version         = ""                         # "" = at cluster version then lags; generic default: "" (set to roll nodes)
+node_desired_size    = 3                          # desired nodes;    generic default: 2
+node_min_size        = 2                          # min nodes;        generic default: 1
+node_max_size        = 4                          # max nodes;        generic default: 4
+node_max_unavailable = 1                          # rolling surge;    generic default: 1
+node_disk_size       = 20                         # root EBS GB;      generic default: 20
+
+# ---- add-ons ----
+managed_addons                   = ["vpc-cni", "coredns", "kube-proxy", "aws-ebs-csi-driver", "eks-pod-identity-agent"] # generic default: same core five
+addon_versions                   = {}          # {} = EKS default (lags after upgrade); generic default: {}
+addon_resolve_conflicts          = "OVERWRITE" # OVERWRITE|NONE|PRESERVE;                generic default: "OVERWRITE"
+enable_metrics_server            = true        # install metrics-server;                 generic default: true
+metrics_server_chart_version     = ""          # "" = latest chart;                      generic default: "" (or pin)
+enable_cluster_autoscaler        = true        # install cluster-autoscaler;             generic default: true
+cluster_autoscaler_chart_version = ""          # "" = latest chart;                      generic default: "" (or pin)
+cluster_autoscaler_image_tag     = "v1.34.0"   # MUST track the cluster minor;           generic default: "v<cluster_version>.0"
+enable_cert_manager              = false       # install cert-manager;                   generic default: false
+cert_manager_chart_version       = ""          # "" = latest chart;                      generic default: "" (or pin)
+
+# ---- planted workloads ----
+enable_planted_gotchas = false   # fold gotchas into apply; generic default: false (use `make seed` instead)
+
+# ---- tags merged onto every resource ----
+extra_tags = {}   # e.g. { owner = "you", cost-center = "123" }; generic default: {}
+
+# =============================================================================
+# Per-environment overrides (ONLY what differs from [common])
+# =============================================================================
+
+[dev]
+environment = "dev"                # generic default: "dev"
+
+[prod]
+environment               = "prod"           # generic default: "prod"
+capacity_type             = "ON_DEMAND"      # steadier for prod;        generic default: "ON_DEMAND"
+enabled_cluster_log_types = ["audit", "api"] # on before a prod upgrade; generic default: ["api","audit","authenticator"]
+
+# =============================================================================
+# One-time GitHub Actions OIDC bootstrap (terraform/bootstrap-oidc).
+# Standalone: uses ONLY this table, not the cluster [common] block.
+# =============================================================================
+
+[bootstrap_oidc]
+aws_region          = "us-east-2"                                       # generic default: "us-east-1"
+github_owner        = "jkkelley"                                        # generic default: "<your-gh-user-or-org>"
+github_repo         = "eks-cluster-upgrade-test"                        # generic default: "<repo-name>"
+role_name           = "gha-eks-upgrade-test"                            # generic default: "gha-<repo>"
+subject_claims      = []                                                # [] = repo:<owner>/<repo>:*; generic default: tighten to a branch/env
+managed_policy_arns = ["arn:aws:iam::aws:policy/AdministratorAccess"]   # generic default: a least-privilege custom policy
