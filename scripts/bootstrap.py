@@ -65,6 +65,18 @@ def deep_merge(base: dict, over: dict) -> dict:
     return out
 
 
+def find_placeholders(d: dict, prefix: str = "") -> list:
+    """(dotted_key, value) pairs for string values still holding a <placeholder>."""
+    found = []
+    for k, v in d.items():
+        key = f"{prefix}{k}"
+        if isinstance(v, dict):
+            found += find_placeholders(v, key + ".")
+        elif isinstance(v, str) and "<" in v and ">" in v:
+            found.append((key, v))
+    return found
+
+
 def load_config() -> dict:
     cfg_path = CONFIG if CONFIG.exists() else CONFIG_EXAMPLE
     if not cfg_path.exists():
@@ -128,6 +140,29 @@ def main(argv: list[str]) -> int:
         if not rest and not generate_only:
             log("bootstrap: tfvars generated; no terraform action requested.")
         return 0
+
+    # Preflight: for a real (AWS-touching) action, stop with actionable guidance
+    # if the config still has <placeholder> values, instead of a cryptic TF error.
+    real_actions = {"init", "plan", "apply", "destroy", "refresh", "import"}
+    if rest[0] in real_actions and "-backend=false" not in rest:
+        placeholders = find_placeholders(merged)
+        placeholders += [
+            (f"[backend].{k}", v)
+            for k, v in backend.items()
+            if isinstance(v, str) and "<" in v and ">" in v
+        ]
+        if placeholders:
+            log("")
+            log(f"bootstrap: cannot '{rest[0]}' - your config still has placeholder values to fill:")
+            for key, val in placeholders:
+                log(f"    {key} = {val}")
+            log("")
+            log("  1) cp scripts/config.example.toml scripts/config.toml")
+            log("  2) edit scripts/config.toml and replace every <...> with your real value")
+            log("     ([backend].bucket = an S3 bucket you created; aws_profile; github owner/repo)")
+            log("")
+            log("  No AWS needed for static checks: `make -f Makefile.test test` or `... ministack`.")
+            return 2
 
     tf = ["terraform", f"-chdir={ENV_DIRS[env]}"]
     # Inject the S3 backend on `init` (unless the caller disabled the backend).
