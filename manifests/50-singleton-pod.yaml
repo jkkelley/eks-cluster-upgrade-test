@@ -1,0 +1,26 @@
+# GOTCHA: a naked Pod with no controller behind it.
+# A managed node group upgrade cordons + drains + REPLACES nodes. Anything owned by a
+# Deployment/StatefulSet gets rescheduled; a bare Pod does not - it is evicted and gone,
+# taking its "service" down for good.
+# Detection: kubectl get pods -A -o wide, then check .metadata.ownerReferences (empty = naked).
+#   kubectl get pods -A -o json | jq -r '.items[] | select(.metadata.ownerReferences==null) | "\(.metadata.namespace)/\(.metadata.name)"'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: legacy-singleton
+  namespace: upgrade-gauntlet
+  labels:
+    app: legacy-singleton
+spec:
+  containers:
+    - name: app
+      image: nginx:1.27-alpine
+      ports:
+        - containerPort: 80
+      resources:
+        requests:
+          cpu: 25m
+          memory: 32Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi

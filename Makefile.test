@@ -1,0 +1,38 @@
+# Testing Makefile - static checks + ministack (Podman) sandbox. NO real AWS, no cost.
+# Implements the vendored container-sandbox skill (.claude/skills/container-sandbox).
+#
+#   make -f Makefile.test test                 # fmt-check + validate (fast, no Docker)
+#   make -f Makefile.test ministack ENV=dev    # full plan vs mock AWS (Podman)
+#   make -f Makefile.test ministack-down       # clean up leftover containers
+
+ENV   ?= dev
+TFDIR := terraform/envs/$(ENV)
+
+.DEFAULT_GOAL := test
+.PHONY: test fmt-check validate tflint scan ministack ministack-down
+
+test: fmt-check validate ## Fast static checks (no Docker, no AWS)
+
+fmt-check: ## terraform fmt -check
+	terraform -chdir=terraform fmt -recursive -check
+
+validate: ## init -backend=false + validate for both envs
+	@set -e; for e in dev prod; do \
+	  echo "== validate $$e =="; \
+	  terraform -chdir=terraform/envs/$$e init -backend=false -input=false >/dev/null; \
+	  terraform -chdir=terraform/envs/$$e validate; \
+	done
+
+tflint: ## Lint if tflint is installed
+	@command -v tflint >/dev/null 2>&1 && tflint --chdir=$(TFDIR) --recursive || echo "tflint not installed - skipping"
+
+scan: ## Static security scan if checkov or trivy is installed
+	@command -v checkov >/dev/null 2>&1 && checkov -d terraform --quiet \
+	 || { command -v trivy >/dev/null 2>&1 && trivy config terraform; } \
+	 || echo "checkov/trivy not installed - skipping"
+
+ministack: ## Full terraform plan against a local ministack (Podman) mock AWS
+	bash scripts/ministack-test.sh $(ENV)
+
+ministack-down: ## Force-stop any leftover ministack containers
+	-podman ps -a --filter name=ministack_ -q | xargs -r podman rm -f

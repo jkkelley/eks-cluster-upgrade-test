@@ -1,0 +1,58 @@
+name: terraform-apply
+
+# Manual, gated apply/destroy. Tie the dev/prod GitHub Environments to required
+# reviewers (Settings > Environments) to force an approval before anything runs.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which environment
+        type: choice
+        options: [dev, prod]
+        default: dev
+      action:
+        description: apply or destroy
+        type: choice
+        options: [apply, destroy]
+        default: apply
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: tf-apply-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.6
+
+      - name: AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-2
+
+      - name: init
+        run: terraform -chdir=terraform/envs/${{ inputs.environment }} init -input=false
+
+      - name: ${{ inputs.action }}
+        run: |
+          cd terraform/envs/${{ inputs.environment }}
+          if [ "${{ inputs.action }}" = "destroy" ]; then
+            terraform destroy -auto-approve -input=false
+          else
+            terraform apply -auto-approve -input=false
+          fi

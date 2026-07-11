@@ -1,0 +1,76 @@
+# The "good" workload. Correctly configured: multiple replicas, probes, a healthy
+# PDB, and topology spread. This is what SHOULD sail through a node rotation.
+# If this one has downtime during your upgrade, something in the process is wrong.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-web
+  namespace: upgrade-gauntlet
+  labels:
+    app: demo-web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: demo-web
+  template:
+    metadata:
+      labels:
+        app: demo-web
+    spec:
+      terminationGracePeriodSeconds: 20
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: demo-web
+      containers:
+        - name: web
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-web
+  namespace: upgrade-gauntlet
+spec:
+  selector:
+    app: demo-web
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: demo-web
+  namespace: upgrade-gauntlet
+spec:
+  # Healthy: allow one pod out at a time. Drains proceed.
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: demo-web

@@ -1,0 +1,46 @@
+# GOTCHA: a PodDisruptionBudget that can never be satisfied during a drain.
+# fragile-api has 2 replicas and the PDB demands minAvailable: 2 -> zero voluntary
+# disruptions allowed -> `kubectl drain` (and therefore a managed node group rolling
+# upgrade) will STALL on this namespace until it times out.
+# Detection: kubectl get pdb -A  (look for ALLOWED DISRUPTIONS = 0)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fragile-api
+  namespace: upgrade-gauntlet
+  labels:
+    app: fragile-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fragile-api
+  template:
+    metadata:
+      labels:
+        app: fragile-api
+    spec:
+      containers:
+        - name: api
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fragile-api
+  namespace: upgrade-gauntlet
+spec:
+  # minAvailable == replicas -> ALLOWED DISRUPTIONS is 0 -> drains block here.
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: fragile-api

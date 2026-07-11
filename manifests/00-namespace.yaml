@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: upgrade-gauntlet
+  labels:
+    purpose: eks-upgrade-gauntlet
+    # Pod Security Admission is enforced at 'baseline' here on purpose.
+    # A pre-upgrade hardening check: should this be 'restricted'? What breaks if you flip it?
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted

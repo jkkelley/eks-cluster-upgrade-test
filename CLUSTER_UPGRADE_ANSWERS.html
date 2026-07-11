@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EKS Cluster Upgrade - Answer Key</title>
+<style>
+  :root, [data-theme="dark"] {
+    --bg: #0e1116; --panel: #161b22; --panel2: #1c2330; --border: #2a3340;
+    --text: #e6edf3; --muted: #9aa7b4; --accent: #58a6ff; --accent2: #7ee787;
+    --warn: #f0b429; --danger: #ff7b72; --code-bg: #0b0f14; --chip: #21324a;
+  }
+  [data-theme="light"] {
+    --bg: #f6f8fa; --panel: #ffffff; --panel2: #f0f3f6; --border: #d6dde4;
+    --text: #1a2029; --muted: #5a6675; --accent: #0969da; --accent2: #1a7f37;
+    --warn: #9a6700; --danger: #cf222e; --code-bg: #f2f4f7; --chip: #dde7f5;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header.top {
+    position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--panel) 92%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+  }
+  header.top h1 { font-size: 16px; margin: 0; font-weight: 700; }
+  header.top .tag { color: var(--muted); font-size: 12px; }
+  header.top .spacer { flex: 1; }
+  .btn {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px;
+  }
+  .btn:hover { border-color: var(--accent); }
+
+  .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; max-width: 1180px; margin: 0 auto; padding: 24px 20px 80px; }
+  nav.toc { position: sticky; top: 68px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; font-size: 13.5px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; }
+  nav.toc li { margin: 2px 0; }
+  nav.toc a { color: var(--muted); display: block; padding: 4px 8px; border-radius: 6px; border-left: 2px solid transparent; }
+  nav.toc a:hover { color: var(--text); background: var(--panel); text-decoration: none; }
+  nav.toc .sub { padding-left: 14px; font-size: 12.5px; }
+
+  main { min-width: 0; }
+  .hero { background: linear-gradient(135deg, var(--panel), var(--panel2)); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; margin-bottom: 26px; }
+  .hero h2 { margin: 0 0 8px; font-size: 26px; }
+  .hero p { color: var(--muted); margin: 6px 0; }
+
+  section { margin: 34px 0; scroll-margin-top: 72px; }
+  section > h2 { font-size: 22px; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }
+  section > h3 { font-size: 17px; margin-top: 24px; }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin: 14px 0; }
+  .card h4 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .w5 { margin: 10px 0; padding-left: 0; list-style: none; }
+  .w5 li { margin: 3px 0; }
+  .w5 b { color: var(--accent2); display: inline-block; min-width: 62px; }
+
+  .chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--chip); color: var(--text); border: 1px solid var(--border); }
+  .chip.planted { background: color-mix(in srgb, var(--warn) 22%, transparent); border-color: var(--warn); color: var(--text); }
+  .chip.sev-high { background: color-mix(in srgb, var(--danger) 22%, transparent); border-color: var(--danger); }
+  .chip.sev-med { background: color-mix(in srgb, var(--warn) 18%, transparent); border-color: var(--warn); }
+  .chip.sev-low { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: var(--accent); }
+
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 12px 0 4px; font-weight: 700; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 13px; margin: 6px 0; }
+  code:not(pre code) { background: var(--code-bg); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; font-size: 13px; }
+  .detect { border-left: 3px solid var(--accent); }
+  .fix { border-left: 3px solid var(--accent2); }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13.5px; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel2); position: sticky; }
+  tbody tr:nth-child(even) { background: color-mix(in srgb, var(--panel) 60%, transparent); }
+
+  .callout { border-radius: 10px; padding: 12px 16px; margin: 14px 0; border: 1px solid var(--border); }
+  .callout.warn { background: color-mix(in srgb, var(--warn) 12%, transparent); border-color: var(--warn); }
+  .callout.danger { background: color-mix(in srgb, var(--danger) 12%, transparent); border-color: var(--danger); }
+  .callout.info { background: color-mix(in srgb, var(--accent) 10%, transparent); border-color: var(--accent); }
+
+  ol.steps { counter-reset: step; list-style: none; padding-left: 0; }
+  ol.steps > li { position: relative; padding: 10px 0 10px 44px; border-bottom: 1px dashed var(--border); }
+  ol.steps > li::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: 10px; width: 30px; height: 30px; background: var(--accent); color: #04121f; border-radius: 50%; display: grid; place-items: center; font-weight: 700; }
+  [data-theme="light"] ol.steps > li::before { color: #fff; }
+
+  footer { max-width: 1180px; margin: 0 auto; padding: 30px 20px 60px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; max-height: none; order: -1; border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--panel); }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>⎈ EKS Cluster Upgrade - Answer Key</h1>
+  <span class="tag">SEALED · spoilers within</span>
+  <span class="spacer"></span>
+  <button class="btn" id="theme-btn" onclick="toggleTheme()">☀️ Light</button>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Table of contents">
+    <ol>
+      <li><a href="#golden">0 · Golden rules</a></li>
+      <li><a href="#runbook">1 · The correct order</a></li>
+      <li><a href="#planted">2 · Planted gotchas (this repo)</a></li>
+      <li class="sub"><a href="#g-addon-skew">2.1 Add-on version skew</a></li>
+      <li class="sub"><a href="#g-kubeproxy">2.2 kube-proxy skew</a></li>
+      <li class="sub"><a href="#g-ca">2.3 cluster-autoscaler pin</a></li>
+      <li class="sub"><a href="#g-pdb">2.4 Blocking PDB</a></li>
+      <li class="sub"><a href="#g-webhook">2.5 Fail-closed webhook</a></li>
+      <li class="sub"><a href="#g-cidr">2.6 Non-canonical CIDR</a></li>
+      <li class="sub"><a href="#g-singleton">2.7 Naked singleton</a></li>
+      <li class="sub"><a href="#g-auth">2.8 aws-auth vs access entries</a></li>
+      <li class="sub"><a href="#g-ip">2.9 Subnet IP exhaustion</a></li>
+      <li class="sub"><a href="#g-audit">2.10 Audit logging off</a></li>
+      <li class="sub"><a href="#g-endpoint">2.11 Open API endpoint</a></li>
+      <li class="sub"><a href="#g-os">2.12 Node OS / runtime</a></li>
+      <li><a href="#boundaries">3 · Version boundaries 1.34→1.36</a></li>
+      <li><a href="#addons">4 · The 18-plugin audit</a></li>
+      <li><a href="#checklist">5 · Pre-upgrade checklist</a></li>
+      <li><a href="#toolbox">6 · Detection toolbox</a></li>
+      <li><a href="#why">7 · Why these gotchas</a></li>
+      <li><a href="#cost">8 · Cost &amp; teardown</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <div class="hero">
+      <h2>How to use this</h2>
+      <p>This is the answer key for the upgrade gauntlet. <b>Try the drill first</b> - stand the cluster up, seed the gotchas
+        (<code>make seed</code>), point kubectl at it, and hunt. Then come back and grade yourself.</p>
+      <p>Each item below is written as <b>Who / What / Where / When / Why</b>, then a <span style="color:var(--accent)">Detect</span>
+        command and a <span style="color:var(--accent2)">Fix</span>. The upgrade path is <b>1.34 → 1.35 → 1.36</b>, one minor at a time.</p>
+      <div class="callout danger">🔻 <b>When you're done: <code>make down ENV=dev</code>.</b> A left-running control plane is ~$73/mo; on an extended-support version it is ~$438/mo.</div>
+    </div>
+
+    <!-- 0 GOLDEN RULES -->
+    <section id="golden">
+      <h2>0 · Golden rules of an EKS upgrade</h2>
+      <ol class="steps">
+        <li><b>Never skip a minor.</b> EKS upgrades one minor at a time. 1.34 → 1.36 means doing 1.34→1.35, then 1.35→1.36. Trying to jump is rejected.</li>
+        <li><b>Control plane first, then data plane.</b> Upgrade the API server, then add-ons, then nodes. The control plane may run up to two minors ahead of nodes, never behind.</li>
+        <li><b>Read the release notes for <em>every</em> minor you cross.</b> The breaking changes live there - not in a blog.</li>
+        <li><b>Practice in dev, then prod.</b> That is literally why this repo is modular with two envs.</li>
+        <li><b>Back up before you start</b> and have a rollback story. The control plane cannot be downgraded - your rollback is node/app level.</li>
+        <li><b>Health first.</b> A cluster that is already unhealthy (pending pods, NotReady nodes, failing add-ons) will not get healthier mid-upgrade.</li>
+      </ol>
+      <div class="callout info"><b>Version skew policy (memorize for interviews):</b> kube-apiserver is the reference. kubelet may be up to 3 minors older than the API server (older policy said 2); kube-proxy must be within one minor of the node's kubelet; managed add-ons (CoreDNS, VPC CNI, kube-proxy) each have their own compatibility matrix per Kubernetes version.</div>
+    </section>
+
+    <!-- 1 RUNBOOK -->
+    <section id="runbook">
+      <h2>1 · The correct order (the runbook)</h2>
+      <p>This is the sequence. Getting the order wrong is itself the most common interview failure.</p>
+      <ol class="steps">
+        <li><b>Pre-flight health.</b> All nodes <code>Ready</code>, no long-<code>Pending</code> pods, all <code>kube-system</code> add-ons healthy, no expiring certs, enough spare capacity + IPs for a surge. <span class="mono">kubectl get nodes,pods -A</span></li>
+        <li><b>Enable audit logging</b> (if off) so you can see deprecated API calls server-side. Let it run a few days before you trust "nothing uses removed APIs."</li>
+        <li><b>Scan for deprecated/removed APIs</b> with <code>kubent</code> and <code>pluto</code> against the <em>target</em> version - your live manifests, Helm releases, and GitOps repos.</li>
+        <li><b>Check add-on compatibility</b> for the target minor: <code>aws eks describe-addon-versions --kubernetes-version 1.35</code> for each managed add-on; check the compatibility matrix for every Helm-installed controller.</li>
+        <li><b>Check the data plane:</b> AMI family (AL2 is gone at 1.33+), node OS/runtime changes, kubelet flags, custom launch templates.</li>
+        <li><b>Clear disruption blockers:</b> fix PDBs that allow 0 disruptions, audit fail-closed webhooks, wrap naked pods, confirm apps tolerate a rolling reschedule.</li>
+        <li><b>Back up:</b> Velero (or equivalent) for namespaced resources + PVs; snapshot anything stateful; export critical CRs.</li>
+        <li><b>Upgrade the control plane</b> one minor. <span class="mono">aws eks update-cluster-version --name &lt;c&gt; --kubernetes-version 1.35</span> (or bump <code>cluster_version</code> and apply).</li>
+        <li><b>Upgrade the managed add-ons</b> to versions that match the new control plane - <em>kube-proxy first / promptly</em>, then CoreDNS and VPC CNI.</li>
+        <li><b>Upgrade the nodes</b> (managed node group version, or blue/green a new group and drain the old). Watch the rolling replacement respect PDBs.</li>
+        <li><b>Validate:</b> nodes on the new kubelet, add-ons healthy, demo app never lost quorum, workloads happy. <em>Then repeat from step 3 for the next minor.</em></li>
+      </ol>
+    </section>
+
+    <!-- 2 PLANTED GOTCHAS -->
+    <section id="planted">
+      <h2>2 · Planted gotchas in this repo</h2>
+      <p>These are wired into the Terraform and the <code>manifests/</code> fixtures on purpose. Find them, fix them, understand them.</p>
+
+      <div class="card" id="g-addon-skew">
+        <h4>2.1 Managed add-ons lag the control plane <span class="chip planted">planted</span><span class="chip sev-high">high</span></h4>
+        <ul class="w5">
+          <li><b>Who</b> Platform/DevOps performing the upgrade.</li>
+          <li><b>What</b> <code>addon_versions</code> is empty, so add-ons install at the cluster's default and do <em>not</em> auto-follow when you bump <code>cluster_version</code>. After the control-plane upgrade, VPC CNI / CoreDNS / kube-proxy sit on the old version.</li>
+          <li><b>Where</b> <code>modules/addons</code> (managed add-ons), visible in <code>kubectl get pods -n kube-system</code>.</li>
+          <li><b>When</b> Immediately after each control-plane bump.</li>
+          <li><b>Why</b> EKS never upgrades add-ons for you. Lagging add-ons drift out of the supported skew window and eventually break (kube-proxy is the sharpest edge - see 2.2).</li>
+        </ul>
+        <div class="label">Detect</div>
+        <pre class="detect">aws eks describe-addon --cluster-name &lt;c&gt; --addon-name kube-proxy \
+  --query 'addon.addonVersion'
+aws eks describe-addon-versions --addon-name kube-proxy \
+  --kubernetes-version 1.35 --query 'addons[0].addonVersions[0].addonVersion'</pre>
+        <div class="label">Fix (in order, after the control plane)</div>
+        <pre class="fix"># kube-proxy first, then CoreDNS, then VPC CNI
+aws eks update-addon --cluster-name &lt;c&gt; --addon-name kube-proxy   --addon-version &lt;v&gt; --resolve-conflicts OVERWRITE
+aws eks update-addon --cluster-name &lt;c&gt; --addon-name coredns      --addon-version &lt;v&gt;
+aws eks update-addon --cluster-name &lt;c&gt; --addon-name vpc-cni      --addon-version &lt;v&gt;
+# Terraform way: set addon_versions = { kube-proxy = "&lt;v&gt;", ... } and apply</pre>
+      </div>
+
+      <div class="card" id="g-kubeproxy">
+        <h4>2.2 kube-proxy version skew <span class="chip planted">planted</span><span class="chip sev-high">high</span></h4>
+        <ul class="w5">
+          <li><b>Who</b> Whoever forgets step 9 of the runbook.</li>
+          <li><b>What</b> kube-proxy must stay within one minor of the node kubelet / control plane. Two minors behind and Services/iptables programming misbehaves.</li>
+          <li><b>Where</b> <code>kube-system/kube-proxy</code> DaemonSet.</li>
+          <li><b>When</b> If you upgrade control plane + nodes across two minors without touching kube-proxy.</li>
+          <li><b>Why</b> It is the component people forget because "it just works" - until it doesn't.</li>
+        </ul>
+        <div class="label">Detect</div>
+        <pre class="detect">kubectl -n kube-system get ds kube-proxy \
+  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+kubectl get nodes -o wide   # compare KERNEL/kubelet minor to kube-proxy</pre>
+        <div class="label">Fix</div>
+        <pre class="fix">aws eks update-addon --cluster-name &lt;c&gt; --addon-name kube-proxy --addon-version &lt;matching-v&gt;</pre>
+      </div>
+
+      <div class="card" id="g-ca">
+        <h4>2.3 cluster-autoscaler pinned to the wrong minor <span class="chip planted">planted</span><span class="chip sev-med">med</span></h4>
+        <ul class="w5">
+          <li><b>Who</b> The upgrader who bumps the cluster but not the controllers.</li>
+          <li><b>What</b> <code>cluster_autoscaler_image_tag = "v1.34.0"</code>. Cluster-autoscaler's image minor <em>must</em> track the cluster minor. After 1.34→1.35 it is a minor behind.</li>
+          <li><b>Where</b> Helm release <code>cluster-autoscaler</code> in <code>kube-system</code> (<code>modules/addons</code>).</li>
+          <li><b>When</b> Right after the control-plane upgrade.</li>
+          <li><b>Why</b> A mismatched CA can misread node groups / new APIs and scale incorrectly. It is the canonical "controller pinned to a k8s version" gotcha (Karpenter, LB controller, metrics-server all have their own matrices too).</li>
+        </ul>
+        <div class="label">Detect</div>
+        <pre class="detect">kubectl -n kube-system get deploy cluster-autoscaler \
+  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+kubectl -n kube-system logs deploy/cluster-autoscaler | grep -i version</pre>
+        <div class="label">Fix</div>
+        <pre class="fix"># bump the tag to match the new cluster minor, then apply
+cluster_autoscaler_image_tag = "v1.35.0"</pre>
+      </div>
+
+      <div class="card" id="g-pdb">
+        <h4>2.4 A PodDisruptionBudget that blocks every drain <span class="chip planted">planted</span><span class="chip sev-high">high</span></h4>
+        <ul class="w5">
+          <li><b>Who</b> Anyone rolling nodes.</li>
+          <li><b>What</b> <code>fragile-api</code> has 2 replicas and a PDB of <code>minAvailable: 2</code> → <b>0 allowed disruptions</b> → <code>kubectl drain</code> and the managed node group rolling upgrade stall on this namespace until they time out.</li>
+          <li><b>Where</b> <code>manifests/20-blocking-pdb.yaml</code>, namespace <code>upgrade-gauntlet</code>.</li>
+          <li><b>When</b> During node rotation (step 10).</li>
+          <li><b>Why</b> The single most common reason a node upgrade "hangs." PDBs are correct in spirit and lethal when <code>minAvailable == replicas</code>.</li>
+        </ul>
+        <div class="label">Detect</div>
+        <pre class="detect">kubectl get pdb -A          # look for ALLOWED DISRUPTIONS = 0
+kubectl get pdb -A -o json | jq -r '.items[]
+  | select(.status.disruptionsAllowed==0)
+  | "\(.metadata.namespace)/\(.metadata.name)"'</pre>
+        <div class="label">Fix</div>
+        <pre class="fix"># give it headroom: raise replicas, or loosen the budget
+kubectl -n upgrade-gauntlet scale deploy/fragile-api --replicas=3
+# or set minAvailable: 1  (or maxUnavailable: 1)</pre>
+      </div>
+
+      <div class="card" id="g-webhook">
+        <h4>2.5 A fail-closed admission webhook <span class="chip planted">planted</span><span class="chip sev-high">high</span></h4>
+        <ul class="w5">
+          <li><b>Who</b> The whole cluster, if this scope were broad.</li>
+          <li><b>What</b> A <code>ValidatingWebhookConfiguration</code> with <code>failurePolicy: Fail</code> whose backing Service has no healthy endpoints. It is scoped inert here (matches a label nothing carries) - but that is exactly the shape that bricks a cluster when the backend is evicted during a drain.</li>
+          <li><b>Where</b> <code>manifests/40-failing-webhook.yaml</code>.</li>
+          <li><b>When</b> During node rotation, if a real Fail webhook's pods land on the drained node and don't reschedule (deadlock: you can't create pods to recover).</li>
+          <li><b>Why</b> "Webhook took down the cluster during maintenance" is a classic postmortem. Audit failurePolicy, timeout, scope, and backend HA before upgrading.</li>
+        </ul>
+        <div class="label">Detect</div>
+        <pre class="detect">kubectl get validatingwebhookconfigurations,mutatingwebhookconfigurations -o json \
+  | jq -r '.items[] | .metadata.name as $n | .webhooks[]?
+    | select(.failurePolicy=="Fail")
+    | "\($n)  timeout=\(.timeoutSeconds)  \(.clientConfig.service.namespace)/\(.clientConfig.service.name)"'</pre>
+        <div class="label">Fix</div>
+        <pre class="fix"># make the backend HA + anti-affinity, cap timeoutSeconds, scope tightly,
+# and for non-critical webhooks prefer failurePolicy: Ignore.
+kubectl delete validatingwebhookconfiguration gauntlet-fail-closed-demo</pre>
+      </div>
+
+      <div class="card" id="g-cidr">
+        <h4>2.6 Non-canonical CIDR (1.36 strict validation) <span class="chip planted">planted</span><span class="chip sev-med">med</span></h4>
+        <ul class="w5">
+          <li><b>Who</b> Anyone editing this object on 1.36.</li>
+          <li><b>What</b> A NetworkPolicy with <code>ipBlock.cidr: 10.0.5.7/16</code> - host bits set. Fine on 1.34/1.35. On <b>1.36</b> <code>StrictIPCIDRValidation</code> rejects any create/update carrying a non-canonical CIDR (or leading zeros). Existing objects are ratcheted, so it lurks until the next edit.</li>
+          <li><b>Where</b> <code>manifests/30-noncanonical-cidr-netpol.yaml</code>.</li>
+          <li><b>When</b> First edit/reapply after reaching 1.36 (very GitOps-unfriendly).</li>
+          <li><b>Why</b> A real 1.36 release-note action item that is invisible until it bites.</li>
+        </ul>
+        <div class="label">Detect</div>
+        <pre class="detect"># audit manifests/GitOps for CIDRs with host bits or leading zeros
+grep -rEn '([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+' manifests/ | grep -Ev '\.0/'</pre>
+        <div class="label">Fix</div>
+        <pre class="fix">cidr: 10.0.0.0/16   # canonical network address</pre>
+      </div>
+
+      <div class="card" id="g-singleton">
+        <h4>2.7 A naked singleton pod <span class="chip planted">planted</span><span class="chip sev-low">low</span></h4>
+        <ul class="w5">
+          <li><b>Who</b> The "service" that quietly disappears.</li>
+          <li><b>What</b> <code>legacy-singleton</code> is a bare Pod with no controller. Node rotation evicts it and it never comes back.</li>
+          <li><b>Where</b> <code>manifests/50-singleton-pod.yaml</code>.</li>
+          <li><b>When</b> The moment its node is drained.</li>
+          <li><b>Why</b> Only controller-managed pods reschedule. Naked pods = guaranteed downtime on any node lifecycle event.</li>
+        </ul>
+        <div class="label">Detect</div>
+        <pre class="detect">kubectl get pods -A -o json | jq -r '.items[]
+  | select(.metadata.ownerReferences==null)
+  | "\(.metadata.namespace)/\(.metadata.name)"'</pre>
+        <div class="label">Fix</div>
+        <pre class="fix"># wrap it in a Deployment (replicas + rescheduling)
+kubectl -n upgrade-gauntlet create deployment legacy --image=nginx:1.27-alpine --replicas=2</pre>
+      </div>
+
+      <div class="card" id="g-auth">
+        <h4>2.8 aws-auth vs access entries <span class="chip planted">planted</span><span class="chip sev-med">med</span></h4>
+        <ul class="w5">
+          <li><b>Who</b> Anyone managing cluster access / migrating auth.</li>
+          <li><b>What</b> <code>authentication_mode = "API_AND_CONFIG_MAP"</code> - both the legacy <code>aws-auth</code> ConfigMap and the new <b>access entries</b> are active. Confusing to reason about; easy to lock yourself out mid-migration.</li>
+          <li><b>Where</b> <code>modules/eks</code> access config; <code>kube-system/aws-auth</code> and EKS access entries.</li>
+          <li><b>When</b> During an access-management migration (increasingly bundled with upgrades).</li>
+          <li><b>Why</b> Access entries are the modern, IAM-native way and remove a whole class of aws-auth footguns. Know how to move and how not to lose admin.</li>
+        </ul>
+        <div class="label">Detect</div>
+        <pre class="detect">kubectl -n kube-system get configmap aws-auth -o yaml
+aws eks list-access-entries --cluster-name &lt;c&gt;
+aws eks describe-cluster --name &lt;c&gt; --query 'cluster.accessConfig.authenticationMode'</pre>
+        <div class="label">Fix</div>
+        <pre class="fix"># create access entries for every principal that needs access, verify,
+# THEN move authentication_mode to API and retire aws-auth.
+aws eks create-access-entry --cluster-name &lt;c&gt; --principal-arn &lt;arn&gt;
+aws eks associate-access-policy --cluster-name &lt;c&gt; --principal-arn &lt;arn&gt; \
+  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy \
+  --access-scope type=cluster</pre>
+      </div>
+
+      <div class="card" id="g-ip">
+        <h4>2.9 Small subnets → IP exhaustion on surge <span class="chip planted">planted</span><span class="chip sev-med">med</span></h4>
+        <ul class="w5">
+          <li><b>Who</b> The upgrade that needs to launch surge nodes and pods.</li>
+          <li><b>What</b> Deliberately small subnets (<code>/24</code>). The VPC CNI assigns real VPC IPs to every pod; a rolling upgrade briefly doubles nodes+pods and can exhaust the subnet.</li>
+          <li><b>Where</b> <code>modules/vpc</code> subnet CIDRs.</li>
+          <li><b>When</b> During surge (new nodes come up before old drain).</li>
+          <li><b>Why</b> "Pods stuck in ContainerCreating - failed to assign an IP" mid-upgrade is a real outage. Plan IP space and/or enable prefix delegation.</li>
+        </ul>
+        <div class="label">Detect</div>
+        <pre class="detect">aws ec2 describe-subnets --filters Name=tag:kubernetes.io/role/internal-elb,Values=1 \
+  --query 'Subnets[].[SubnetId,AvailableIpAddressCount]' --output table
+kubectl get pods -A | grep -E 'ContainerCreating|FailedCreatePodSandBox'</pre>
+        <div class="label">Fix</div>
+        <pre class="fix"># enable prefix delegation (more pods per ENI, denser IP use)
+kubectl -n kube-system set env ds/aws-node ENABLE_PREFIX_DELEGATION=true
+# or widen private_subnet_cidrs / add subnets and reapply</pre>
+      </div>
+
+      <div class="card" id="g-audit">
+        <h4>2.10 Audit logging is off <span class="chip planted">planted</span><span class="chip sev-low">low</span></h4>
+        <ul class="w5">
+          <li><b>Who</b> The person trying to prove nothing uses a deprecated API.</li>
+          <li><b>What</b> <code>enabled_cluster_log_types = []</code>. Cheap by default, but you are blind to which clients still call deprecated/removed APIs.</li>
+          <li><b>Where</b> <code>modules/eks</code> logging.</li>
+          <li><b>When</b> Before any upgrade that crosses an API removal.</li>
+          <li><b>Why</b> <code>kubent</code>/<code>pluto</code> scan manifests; the audit log catches the live callers (that controller you forgot about).</li>
+        </ul>
+        <div class="label">Detect / Fix</div>
+        <pre class="fix"># turn on audit (+ api) logging BEFORE the upgrade, let it soak
+enabled_cluster_log_types = ["audit", "api"]
+# then query the apiserver_requested_deprecated_apis metric / CloudWatch Logs Insights</pre>
+      </div>
+
+      <div class="card" id="g-endpoint">
+        <h4>2.11 Public API endpoint open to the world <span class="chip planted">planted</span><span class="chip sev-med">med</span></h4>
+        <ul class="w5">
+          <li><b>Who</b> Security review.</li>
+          <li><b>What</b> <code>public_access_cidrs = ["0.0.0.0/0"]</code>. Convenient for a test, wrong for prod.</li>
+          <li><b>Where</b> <code>modules/eks</code> vpc_config.</li>
+          <li><b>When</b> Any hardening pass; especially prod.</li>
+          <li><b>Why</b> The API server should be reachable only from known networks (or private-only + a bastion/VPN).</li>
+        </ul>
+        <div class="label">Detect / Fix</div>
+        <pre class="fix">aws eks describe-cluster --name &lt;c&gt; --query 'cluster.resourcesVpcConfig.publicAccessCidrs'
+# restrict:
+public_access_cidrs = ["203.0.113.0/24"]   # your office/VPN
+# or endpoint_public_access = false (private-only)</pre>
+      </div>
+
+      <div class="card" id="g-os">
+        <h4>2.12 Node OS &amp; runtime changes (AL2023 · cgroup v1 · containerd 2.0) <span class="chip planted">planted</span><span class="chip sev-high">high</span></h4>
+        <ul class="w5">
+          <li><b>Who</b> Anyone with custom AMIs, bootstrap scripts, or cgroup-v1 assumptions.</li>
+          <li><b>What</b> Nodes run <b>AL2023</b> (AL2 AMIs stop at 1.33). Across the path: <b>1.35 removes cgroup v1</b> (kubelet refuses to start on a v1 node) and is the <b>last containerd 1.x</b> release; <b>1.36 requires containerd 2.0</b>.</li>
+          <li><b>Where</b> <code>ami_type = "AL2023_x86_64_STANDARD"</code> in <code>modules/eks</code>; anything with a custom launch template.</li>
+          <li><b>When</b> The 1.35 and 1.36 hops.</li>
+          <li><b>Why</b> Custom AMIs / user-data that assume AL2, cgroup v1, containerd 1.x, or the removed <code>--pod-infra-container-image</code> kubelet flag will fail to boot or join.</li>
+        </ul>
+        <div class="label">Detect</div>
+        <pre class="detect">kubectl get nodes -o wide     # OS-IMAGE, CONTAINER-RUNTIME, KERNEL
+kubectl get nodes -o jsonpath='{range .items[*]}{.status.nodeInfo.containerRuntimeVersion}{"\n"}{end}'</pre>
+        <div class="label">Fix</div>
+        <pre class="fix"># use EKS-optimized AL2023 (default here), remove AL2-only bootstrap assumptions,
+# drop the removed --pod-infra-container-image flag, verify cgroup v2 + containerd 2.x
+# before the 1.35 / 1.36 hops. Roll nodes AFTER the control plane.</pre>
+      </div>
+    </section>
+
+    <!-- 3 VERSION BOUNDARIES -->
+    <section id="boundaries">
+      <h2>3 · Version-boundary specifics (1.34 → 1.36)</h2>
+      <p>The public AWS/Kubernetes release-note headlines for each hop. This is what "read the release notes" actually turns up.</p>
+      <table>
+        <thead><tr><th>Hop</th><th>What changes (and what to do)</th></tr></thead>
+        <tbody>
+          <tr><td><b>→ 1.34</b></td><td><b>No EKS-optimized AL2 AMI</b> (migrate to AL2023). <b>AppArmor deprecated</b>. <b>VolumeAttributesClass GA</b> - self-managed EBS CSI sidecars may need pinning on pre-1.34. <b>DRA core APIs GA</b>. Endpoints API deprecated (use EndpointSlices).</td></tr>
+          <tr><td><b>→ 1.35</b></td><td><b>cgroup v1 removed</b> - kubelet refuses to start on cgroup-v1 nodes. <b>Last containerd 1.x</b> release - move to containerd 2.0 before the next hop. <b>IPVS kube-proxy mode deprecated</b>. <b><code>--pod-infra-container-image</code> kubelet flag removed</b> - strip it from custom AMIs.</td></tr>
+          <tr><td><b>→ 1.36</b></td><td><b>containerd 2.0 required</b>. <b>StrictIPCIDRValidation on by default</b> - non-canonical CIDRs / leading zeros rejected on create/update. <b>gitRepo volume removed</b> (kubelet refuses). IPVS mode removed. <code>Service.spec.externalIPs</code> deprecated.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn">⚠️ <b>1.33 is excluded on purpose.</b> Its EKS standard support ends 2026-07-29; past that the control plane jumps to extended-support pricing (~6×). We start at 1.34 to stay cheap. Falling behind into extended support is itself the lesson.</div>
+    </section>
+
+    <!-- 4 ADDON AUDIT -->
+    <section id="addons">
+      <h2>4 · The 18-plugin audit</h2>
+      <p>For every controller in (or intended for) the cluster: what to check before you cross a minor. A few ship live in this repo; the rest are "install and check these" exercises.</p>
+      <table>
+        <thead><tr><th>Add-on</th><th>Pre-upgrade check</th></tr></thead>
+        <tbody>
+          <tr><td><b>VPC CNI</b> (aws-node)</td><td>Version vs target k8s; prefix delegation / IP space; ENIConfig custom networking. Update after control plane.</td></tr>
+          <tr><td><b>CoreDNS</b></td><td>Managed add-on version; deprecated Corefile directives; PDB so it survives drains; 2+ replicas spread.</td></tr>
+          <tr><td><b>kube-proxy</b></td><td>Within one minor of kubelet - update promptly after the control plane. IPVS mode deprecated 1.35, removed 1.36.</td></tr>
+          <tr><td><b>EBS CSI driver</b></td><td>Add-on version; IRSA/Pod-Identity role intact; VolumeAttributesClass GA at 1.34 (sidecar pinning on older clusters).</td></tr>
+          <tr><td><b>EFS CSI driver</b></td><td>Version matrix; IAM role; mount targets reachable from node subnets.</td></tr>
+          <tr><td><b>Pod Identity Agent</b></td><td>Installed + healthy; migrate IRSA → Pod Identity where sensible.</td></tr>
+          <tr><td><b>AWS Load Balancer Controller</b></td><td>Chart/app version vs k8s; IngressClass + CRDs; webhook cert; the SG/subnet discovery tags.</td></tr>
+          <tr><td><b>Cluster Autoscaler</b></td><td>Image minor MUST equal cluster minor (see 2.3); ASG discovery tags present.</td></tr>
+          <tr><td><b>Karpenter</b></td><td>Big CRD/API churn between majors (v1beta1→v1); NodePool/EC2NodeClass; version-vs-k8s matrix.</td></tr>
+          <tr><td><b>metrics-server</b></td><td>Version; kubelet TLS/serving cert changes; still returning metrics after upgrade.</td></tr>
+          <tr><td><b>cert-manager</b></td><td>CRD API version changes; cannot skip minors - follow its upgrade path; webhook health.</td></tr>
+          <tr><td><b>ingress-nginx</b></td><td>⚠️ Upstream project retiring (2026) - plan migration to Gateway API. Version vs k8s; deprecated Ingress annotations.</td></tr>
+          <tr><td><b>ExternalDNS</b></td><td>Version; RBAC for new API groups; source CRDs.</td></tr>
+          <tr><td><b>external-secrets</b></td><td>CRD versions; provider auth (IRSA/Pod Identity); webhook.</td></tr>
+          <tr><td><b>Secrets Store CSI + AWS provider</b></td><td>Driver + provider versions; SecretProviderClass CRD; rotation.</td></tr>
+          <tr><td><b>kube-prometheus-stack</b></td><td>CRD-heavy (ServiceMonitor/PrometheusRule) - <code>kubectl replace</code> CRDs on chart upgrade; scrape configs.</td></tr>
+          <tr><td><b>Fluent Bit</b></td><td>DaemonSet health; log/parser API changes; IAM for the log sink.</td></tr>
+          <tr><td><b>Velero</b></td><td>Take a backup BEFORE upgrading; verify plugin version + restore path.</td></tr>
+          <tr><td><b>Node Termination Handler</b></td><td>Handles spot/rebalance during rotation; version; queue vs IMDS mode.</td></tr>
+          <tr><td><b>ArgoCD</b></td><td>Its own CRDs; will it fight your manual add-on version bumps (self-heal)? Sync waves during upgrade.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 5 CHECKLIST -->
+    <section id="checklist">
+      <h2>5 · General pre-upgrade checklist</h2>
+      <p>The full sweep, beyond what's planted here.</p>
+      <ul>
+        <li><b>Cluster health:</b> nodes Ready, no stuck Pending/CrashLoop, control plane + add-ons healthy.</li>
+        <li><b>Deprecated/removed APIs:</b> <code>kubent</code> + <code>pluto</code> on manifests, Helm, GitOps; audit logs for live callers.</li>
+        <li><b>Add-on compatibility:</b> every managed add-on and Helm controller against the target minor.</li>
+        <li><b>Node plan:</b> AMI family (AL2023), OS/runtime (cgroup v2, containerd 2.0), custom launch templates, kubelet flags.</li>
+        <li><b>Capacity &amp; surge:</b> spare vCPU quota, spare IPs, <code>max_unavailable</code>/surge settings; enough room to drain one node.</li>
+        <li><b>PDBs:</b> none at 0 allowed disruptions; CoreDNS/critical add-ons have sane PDBs.</li>
+        <li><b>Admission webhooks:</b> failurePolicy, timeout, scope, backend HA - fail-open the non-critical ones.</li>
+        <li><b>Naked pods &amp; singletons:</b> everything important is controller-managed; StatefulSets tolerate reschedule.</li>
+        <li><b>Stateful/EBS:</b> EBS is AZ-locked - a pod must reschedule into its volume's AZ; check topology + PVs.</li>
+        <li><b>Certs &amp; webhooks:</b> cert-manager/webhook certs not expiring during the window.</li>
+        <li><b>Identity:</b> OIDC provider intact; IRSA/Pod-Identity roles valid; access entries / aws-auth reconciled.</li>
+        <li><b>Service quotas:</b> EIP, ENI, instance vCPU, NAT - a surge can hit a limit.</li>
+        <li><b>Backups:</b> Velero + snapshots + critical CR exports; know your rollback (control plane can't downgrade).</li>
+        <li><b>Terraform hygiene:</b> upgrading a shared module can force replacements - <code>plan</code> and read every replace; bump <code>cluster_version</code> deliberately, one minor per apply.</li>
+        <li><b>Probes &amp; graceful shutdown:</b> readiness/liveness sane, <code>terminationGracePeriodSeconds</code> honored, connection draining.</li>
+        <li><b>Dev first:</b> do the whole thing in dev, then prod.</li>
+      </ul>
+    </section>
+
+    <!-- 6 TOOLBOX -->
+    <section id="toolbox">
+      <h2>6 · Detection toolbox</h2>
+      <pre>## deprecated/removed API scanners
+kubent                                   # kube-no-trouble, scans live cluster vs target
+pluto detect-files -d ./manifests        # scan files
+pluto detect-helm -owide                 # scan helm releases
+
+## EKS add-on version matrix
+aws eks describe-addon-versions --addon-name coredns --kubernetes-version 1.35
+
+## what's actually installed / health
+kubectl get nodes -o wide
+kubectl get pods -A -o wide
+kubectl get pdb,validatingwebhookconfigurations,mutatingwebhookconfigurations -A
+kubectl get pods -A -o json | jq -r '.items[] | select(.metadata.ownerReferences==null)
+  | "\(.metadata.namespace)/\(.metadata.name)"'   # naked pods
+
+## upgrade the control plane / nodes
+aws eks update-cluster-version --name <c> --kubernetes-version 1.35
+aws eks update-nodegroup-version --cluster-name <c> --nodegroup-name <ng>
+
+## this repo's terraform way (parameterized)
+cluster_version = "1.35"        # then apply -> upgrades control plane
+node_version    = "1.35"        # then apply -> rolls nodes
+addon_versions  = { kube-proxy = "<v>", coredns = "<v>", vpc-cni = "<v>" }</pre>
+    </section>
+
+    <!-- 7 WHY -->
+    <section id="why">
+      <h2>7 · Why these gotchas were chosen</h2>
+      <p>Every planted item maps to a real category that shows up in production upgrades and interviews:</p>
+      <ul>
+        <li><b>Add-on skew, kube-proxy, cluster-autoscaler</b> - the "you upgraded the control plane but forgot the data plane / controllers" family. The most common real mistake.</li>
+        <li><b>Blocking PDB, fail-closed webhook, naked singleton</b> - the disruption-budget / admission / workload-shape traps that turn a routine node rotation into an outage.</li>
+        <li><b>Non-canonical CIDR, node OS/runtime</b> - version-boundary behavioral changes (1.35/1.36) that <code>kubent</code> will <em>not</em> catch, so you learn to read release notes, not just run a scanner.</li>
+        <li><b>aws-auth vs access entries, open endpoint, audit off</b> - the identity/access/security items bundled into modern upgrades.</li>
+        <li><b>Small subnets</b> - the capacity/IP-space planning that surge upgrades expose.</li>
+      </ul>
+      <p>They are cheap to run (software-layer, on 3 small nodes), safe (nothing bricks the cluster by default), and detectable with standard tooling - so the drill is about <em>process and knowledge</em>, not luck.</p>
+    </section>
+
+    <!-- 8 COST -->
+    <section id="cost">
+      <h2>8 · Cost &amp; teardown</h2>
+      <ul>
+        <li>Control plane: <b>$0.10/hr</b> standard (1.34-1.36) · <b>$0.60/hr</b> extended support (why we avoid 1.33 after 2026-07-29).</li>
+        <li>3× t3.medium SPOT ≈ <b>$0.04/hr</b> · single NAT ≈ <b>$0.045/hr</b> · a promptly-destroyed session ≈ <b>$1-2</b>.</li>
+        <li>Apply <b>one env at a time</b> - dev + prod together doubles the control-plane cost.</li>
+      </ul>
+      <div class="callout danger">🔻 <b><code>make down ENV=dev</code> when you finish.</b> The only expensive mistakes are forgetting to destroy and drifting onto extended support.</div>
+    </section>
+  </main>
+</div>
+
+<footer>
+  Sealed answer key for the EKS Upgrade Gauntlet · path 1.34 → 1.35 → 1.36 · us-east-2 ·
+  serve locally with <code>make serve-answers</code>. Theme preference is remembered on this device.
+</footer>
+
+<script>
+(function () {
+  var KEY = "eks-answers-theme";
+  var saved = localStorage.getItem(KEY);
+  if (saved) document.documentElement.setAttribute("data-theme", saved);
+  function label() {
+    var t = document.documentElement.getAttribute("data-theme") || "dark";
+    document.getElementById("theme-btn").textContent = t === "dark" ? "☀️ Light" : "🌙 Dark";
+  }
+  window.toggleTheme = function () {
+    var cur = document.documentElement.getAttribute("data-theme") || "dark";
+    var next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem(KEY, next);
+    label();
+  };
+  label();
+})();
+</script>
+</body>
+</html>

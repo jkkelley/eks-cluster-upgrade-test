@@ -1,0 +1,37 @@
+# ---- container-sandbox / ministack skill: mandated entries (never commit) ----
+test/
+**/.terraform/
+*.tfvars
+*.tfstate.backup
+**/.terraform.lock.hcl
+
+# ---- Terraform ----
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Keep example var files so the repo is runnable out of the box
+!*.tfvars.example
+
+# ---- Lavish review artifacts (local only) ----
+.lavish/
+
+# ---- Claude local settings (keep skills/, drop local settings) ----
+.claude/settings.local.json
+
+# ---- OS / editor noise ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+.env

@@ -1,0 +1,13 @@
+# Optional overrides for the CI OIDC bootstrap. Defaults already target
+# jkkelley/eks-cluster-upgrade-test in us-east-2.
+
+# github_owner = "jkkelley"
+# github_repo  = "eks-cluster-upgrade-test"
+# role_name    = "gha-eks-upgrade-test"
+
+# Tighten which workflows may assume the role (recommended for real use):
+# subject_claims = ["repo:jkkelley/eks-cluster-upgrade-test:ref:refs/heads/main",
+#                   "repo:jkkelley/eks-cluster-upgrade-test:pull_request"]
+
+# Scope the CI permissions down from AdministratorAccess for anything beyond a throwaway test.
+# managed_policy_arns = ["arn:aws:iam::aws:policy/AmazonEKSClusterPolicy", ...]

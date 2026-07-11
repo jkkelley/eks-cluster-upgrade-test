@@ -1,0 +1,23 @@
+# GOTCHA (Kubernetes 1.36): StrictIPCIDRValidation is enabled by default.
+# The ipBlock CIDR below is NON-canonical (host bits are set: 10.0.5.7 is not the
+# network address of a /16). It applies fine on 1.34/1.35. On 1.36, any CREATE or
+# UPDATE of an object carrying a non-canonical CIDR is REJECTED (existing objects are
+# ratcheted/preserved, so it lurks until the next edit).
+# Detection: audit manifests/GitOps for CIDRs with host bits or leading zeros before 1.36.
+# Fix: write the canonical network address, e.g. 10.0.0.0/16.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: legacy-egress-allow
+  namespace: upgrade-gauntlet
+spec:
+  podSelector:
+    matchLabels:
+      app: fragile-api
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            # NON-canonical on purpose (should be 10.0.0.0/16).
+            cidr: 10.0.5.7/16

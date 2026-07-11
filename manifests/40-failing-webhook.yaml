@@ -1,0 +1,38 @@
+# GOTCHA: an admission webhook with failurePolicy: Fail and no healthy backend.
+# It is deliberately INERT day-to-day: objectSelector matches a label nothing carries,
+# so it does not block normal traffic. But it is exactly the shape that bricks clusters
+# during upgrades: if a broadly-scoped Fail webhook's backend is unavailable (its pods
+# evicted during a node drain, or never rescheduled), the API server denies the matched
+# operations cluster-wide and you cannot create pods to recover.
+#
+# Pre-upgrade checks this is here to teach:
+#   kubectl get validatingwebhookconfigurations -o wide
+#   -> inspect failurePolicy, timeoutSeconds, namespaceSelector/objectSelector scope,
+#      and whether the backing Service has healthy endpoints.
+# Think through: what happens to THIS webhook if its backend runs on the node being drained?
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: gauntlet-fail-closed-demo
+webhooks:
+  - name: fail-closed.upgrade-gauntlet.example.com
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    failurePolicy: Fail
+    timeoutSeconds: 5
+    # Inert scope: nothing in the cluster has this label by default.
+    objectSelector:
+      matchLabels:
+        gauntlet-webhook-target: "true"
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["pods"]
+        scope: "Namespaced"
+    clientConfig:
+      service:
+        name: no-such-webhook-backend
+        namespace: upgrade-gauntlet
+        path: /validate
+        port: 443
