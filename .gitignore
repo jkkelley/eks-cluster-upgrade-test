@@ -18,8 +18,10 @@ override.tf.json
 .terraformrc
 terraform.rc
 
-# Keep example var files so the repo is runnable out of the box
-!*.tfvars.example
+# Bootstrap: generated tfvars + the real (local) config. The documented
+# scripts/config.example.toml stays committed as the hand-off template.
+**/config.auto.tfvars.json
+scripts/config.toml
 
 # ---- Lavish review artifacts (local only) ----
 .lavish/

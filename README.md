@@ -36,6 +36,8 @@ terraform/
   envs/{dev,prod}/                            # thin consumers of modules/stack
   bootstrap-oidc/                             # one-time GitHub Actions OIDC role
 manifests/                                    # the planted gotcha fixtures (make seed)
+scripts/config.example.toml                   # ← single source of truth (copy to config.toml)
+scripts/bootstrap.py                          # reads config, generates tfvars, runs terraform
 scripts/serve-answers.{sh,ps1}                # local viewer for the answer key
 .github/workflows/                            # terraform plan (PR) + apply (gated, OIDC)
 .claude/skills/container-sandbox/             # vendored testing skill (ministack)
@@ -44,17 +46,32 @@ Makefile.test                                 # static checks + ministack sandbo
 CLUSTER_UPGRADE_ANSWERS.html                  # 🔒 sealed answer key (dark mode + light toggle)
 ```
 
-Everything in Terraform is a **variable** - region, versions, names, CIDRs, instance types, capacity type, node counts, the NAT toggle, add-on versions, tags.
-The `envs/` hold **zero resources**; they only pass variables into `modules/stack`.
-Nothing is hardcoded.
+Every Terraform variable has **no default** - values come from one file, `scripts/config.toml`.
+The `envs/` hold **zero resources** and **zero hardcoded values**; they only pass variables into `modules/stack`.
+
+---
+
+## Configuration (single source of truth)
+
+All values live in **`scripts/config.toml`**. There are no defaults in any `variables.tf`.
+
+```bash
+cp scripts/config.example.toml scripts/config.toml   # then edit it for your account
+```
+
+- `[common]` applies to **both** dev and prod - change it once and both envs get it.
+- `[dev]` / `[prod]` hold only the per-env differences (e.g. prod uses `ON_DEMAND` + audit logging).
+- `[bootstrap_oidc]` configures the one-time CI role.
+
+`scripts/bootstrap.py` (Python 3.11+) merges `[common]` + the env section, writes `config.auto.tfvars.json` (git-ignored), and runs Terraform. `make`, the ministack tests, and CI all go through it. Skip the copy step and bootstrap falls back to the committed example, so a fresh clone still runs. `scripts/config.example.toml` documents a generic default for every key inline.
 
 ---
 
 ## Prerequisites
 
-- **Terraform** ≥ 1.6 (built/tested on 1.14.6), **AWS CLI v2**, **kubectl**, **make**, **python3**.
-- Optional: **helm** and **kubectl** on your PATH for hands-on work; **podman** for the ministack tests.
-- An AWS profile named **`your-aws-profile`** (override with `AWS_PROFILE=...`) that can create VPC/EKS/IAM.
+- **Terraform** ≥ 1.6 (built/tested on 1.14.6), **AWS CLI v2**, **kubectl**, **make**, **Python 3.11+** (for the bootstrap).
+- Optional: **helm** on your PATH for hands-on work; **podman** for the ministack tests.
+- An AWS profile named **`your-aws-profile`** (set it under `aws_profile` in the config, or override with `AWS_PROFILE=...`) that can create VPC/EKS/IAM.
 - The Terraform state bucket **`tf-eks-cluster-upgrade-test`** (us-east-2) with S3-native locking. State keys are split `dev/terraform.tfstate` and `prod/terraform.tfstate`.
 
 ---
@@ -90,11 +107,11 @@ The whole point.
 The start version is **1.34**; climb one minor at a time and fix what breaks at each step.
 
 ```bash
-# bump the control plane one minor (edit dev.tfvars or pass -var)
+# bump the control plane one minor: edit scripts/config.toml
 #   cluster_version = "1.35"
 make apply ENV=dev
 
-# reconcile the data plane the CONTROL PLANE just outran:
+# reconcile the data plane the CONTROL PLANE just outran (all in scripts/config.toml):
 #   - update managed add-ons (kube-proxy first), then CoreDNS, VPC CNI
 #   - bump cluster_autoscaler_image_tag to "v1.35.0"
 #   - roll the nodes:  node_version = "1.35"  then apply
@@ -130,12 +147,12 @@ That's the Quick start above (`make up/plan/apply/down`), authenticating with th
 
 ### B) GitHub Actions (OIDC, no static keys)
 
-1. **One-time bootstrap** of the CI role (run locally with admin creds):
+1. **One-time bootstrap** of the CI role (run locally with admin creds; values come from `[bootstrap_oidc]` in the config):
    ```bash
-   AWS_PROFILE=your-aws-profile terraform -chdir=terraform/bootstrap-oidc init
-   AWS_PROFILE=your-aws-profile terraform -chdir=terraform/bootstrap-oidc apply
+   AWS_PROFILE=your-aws-profile python3 scripts/bootstrap.py bootstrap-oidc init -input=false
+   AWS_PROFILE=your-aws-profile python3 scripts/bootstrap.py bootstrap-oidc apply
    gh variable set AWS_ROLE_ARN --repo jkkelley/eks-cluster-upgrade-test \
-     --body "$(terraform -chdir=terraform/bootstrap-oidc output -raw role_arn)"
+     --body "$(python3 scripts/bootstrap.py bootstrap-oidc output -raw role_arn)"
    ```
 2. **Plan on PRs** - `terraform-plan.yml` runs `fmt`/`validate` with no AWS, then a real OIDC plan and posts it as a PR comment (per env).
 3. **Apply is manual and gated** - run `terraform-apply.yml` via _workflow_dispatch_ (choose `dev`/`prod` and `apply`/`destroy`). Tie the `dev`/`prod` GitHub Environments to required reviewers (Settings → Environments) so an apply needs approval.
@@ -163,4 +180,4 @@ make -f Makefile.test ministack ENV=dev # full terraform plan vs a Podman minist
 This repo is meant to be shared.
 Clone it, `make up`, `make seed`, and try to get through the 1.34 → 1.36 climb without opening the answer key.
 It doubles as interview prep: the answer key's sections map to the questions that actually get asked about EKS upgrades.
-Everything is parameterized, so you can crank the difficulty (more live add-ons, private-vs-public nodes, on-demand vs spot, extra minors) by editing variables - never code.
+Everything is config-driven, so you can crank the difficulty (more live add-ons, private-vs-public nodes, on-demand vs spot, extra minors) by editing `scripts/config.toml` - never code.

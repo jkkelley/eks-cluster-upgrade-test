@@ -12,7 +12,7 @@ The planted items and their fixes are documented in `CLUSTER_UPGRADE_ANSWERS.htm
 ## Hard rules
 
 1. **Never run `terraform apply`, `make up/apply`, or otherwise touch real AWS without explicit user approval.** The user drives all applies. Plans and validation are fine.
-2. **Parameterize everything - do not hardcode.** Region, versions, names, CIDRs, instance types, capacity type, node counts, the NAT toggle, add-on versions, and tags are all variables with defaults. New values become variables in `modules/stack` (and are surfaced in `envs/*/variables.tf`). `envs/` hold zero resources.
+2. **Config-driven - no defaults, no hardcoding.** Every Terraform variable has NO default; all values live in `scripts/config.toml` (`[common]` applies to both envs, `[dev]`/`[prod]` hold only the diffs). To add a value: put it in the config AND declare the (default-less) variable threaded through env -> `modules/stack` -> the module. Never write a `default =`. Run Terraform through `scripts/bootstrap.py` / `make`, never bare - bare terraform has no variable values.
 3. **Test Terraform through ministack.** Any time you write or modify Terraform, validate it via the vendored `container-sandbox` skill (`.claude/skills/container-sandbox/SKILL.md`): `make -f Makefile.test ministack ENV=dev`. `terraform validate` alone is not enough. No real AWS.
 4. **Cost discipline.** The control plane bills ~$0.10/hr (or ~$0.60/hr on extended support). Whenever you help the user bring the cluster up, remind them that `make down ENV=<env>` stops the charges, and to apply one env at a time.
 5. **One minor at a time.** The upgrade path is 1.34 → 1.35 → 1.36. Never suggest skipping a minor. Control plane first, then add-ons, then nodes.
@@ -21,8 +21,9 @@ The planted items and their fixes are documented in `CLUSTER_UPGRADE_ANSWERS.htm
 
 - `terraform/modules/{vpc,eks,addons,workloads}` - implementation (raw AWS resources; transparent for learning).
 - `terraform/modules/stack` - composition; the only place the modules are wired together.
-- `terraform/envs/{dev,prod}` - thin consumers (backend + providers + one `module "stack"` block + tfvars).
-- `terraform/bootstrap-oidc` - one-time GitHub Actions OIDC role.
+- `terraform/envs/{dev,prod}` - thin consumers (backend + providers + one `module "stack"` block; no defaults). Values come from the config via the bootstrap.
+- `terraform/bootstrap-oidc` - one-time GitHub Actions OIDC role (config table `[bootstrap_oidc]`).
+- `scripts/config.example.toml` - single source of truth template; `scripts/bootstrap.py` merges it and generates each env's tfvars.
 - `manifests/` - planted gotcha fixtures, applied with `make seed`.
 - `Makefile` (lifecycle) and `Makefile.test` (static + ministack). Cross-OS (Linux + Windows 11).
 
@@ -32,7 +33,7 @@ The planted items and their fixes are documented in `CLUSTER_UPGRADE_ANSWERS.htm
 - Kube/AWS auth uses `aws eks get-token` via the `AWS_PROFILE` env var, so the same config works locally and in CI (OIDC). Do not hardcode a profile in `backend.tf` or providers.
 - State: S3 bucket `tf-eks-cluster-upgrade-test`, keys `dev|prod|bootstrap/terraform.tfstate`, `use_lockfile = true` (no DynamoDB).
 - Follow the global markdown rule: one full sentence per line in long Markdown.
-- Do not commit `*.tfstate`, `.terraform/`, `*.tfvars`, or `.terraform.lock.hcl` (see `.gitignore`); keep `*.tfvars.example` committed.
+- Config: `scripts/config.toml` (real values) is git-ignored; `scripts/config.example.toml` (documented template) is committed. Do not commit `*.tfstate`, `.terraform/`, `config.auto.tfvars.json`, `*.tfvars`, or `.terraform.lock.hcl` (see `.gitignore`).
 
 ## Definition of done for changes here
 
