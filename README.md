@@ -71,8 +71,8 @@ cp scripts/config.example.toml scripts/config.toml   # then edit it for your acc
 
 - **Terraform** ≥ 1.6 (built/tested on 1.14.6), **AWS CLI v2**, **kubectl**, **make**, **Python 3.11+** (for the bootstrap).
 - Optional: **helm** on your PATH for hands-on work; **podman** for the ministack tests.
-- An AWS profile named **`your-aws-profile`** (set it under `aws_profile` in the config, or override with `AWS_PROFILE=...`) that can create VPC/EKS/IAM.
-- The Terraform state bucket **`tf-eks-cluster-upgrade-test`** (us-east-2) with S3-native locking. State keys are split `dev/terraform.tfstate` and `prod/terraform.tfstate`.
+- An **AWS profile** (set it under `aws_profile` in the config, or override with `AWS_PROFILE=...`) that can create VPC/EKS/IAM.
+- An **S3 bucket for Terraform state** (set `[backend].bucket` + `region` in the config) with S3-native locking. The bootstrap injects the bucket/region and picks the state key per env (`dev/`, `prod/`, `bootstrap/`), so nothing is hardcoded in `backend.tf`.
 
 ---
 
@@ -143,15 +143,16 @@ It is called an _answer key_ on purpose - **don't read it until you've tried the
 
 ### A) Locally with Terraform
 
-That's the Quick start above (`make up/plan/apply/down`), authenticating with the `your-aws-profile` profile via `AWS_PROFILE`.
+That's the Quick start above (`make up/plan/apply/down`), authenticating with your AWS profile via `AWS_PROFILE`.
 
 ### B) GitHub Actions (OIDC, no static keys)
 
 1. **One-time bootstrap** of the CI role (run locally with admin creds; values come from `[bootstrap_oidc]` in the config):
    ```bash
-   AWS_PROFILE=your-aws-profile python3 scripts/bootstrap.py bootstrap-oidc init -input=false
-   AWS_PROFILE=your-aws-profile python3 scripts/bootstrap.py bootstrap-oidc apply
-   gh variable set AWS_ROLE_ARN --repo jkkelley/eks-cluster-upgrade-test \
+   AWS_PROFILE=<your-admin-profile> python3 scripts/bootstrap.py bootstrap-oidc init -input=false
+   AWS_PROFILE=<your-admin-profile> python3 scripts/bootstrap.py bootstrap-oidc apply
+   gh variable set AWS_ROLE_ARN \
+     --repo "$(python3 scripts/bootstrap.py bootstrap-oidc --print github_owner)/$(python3 scripts/bootstrap.py bootstrap-oidc --print github_repo)" \
      --body "$(python3 scripts/bootstrap.py bootstrap-oidc output -raw role_arn)"
    ```
 2. **Plan on PRs** - `terraform-plan.yml` runs `fmt`/`validate` with no AWS, then a real OIDC plan and posts it as a PR comment (per env).

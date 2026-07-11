@@ -31,7 +31,7 @@ The planted items and their fixes are documented in `CLUSTER_UPGRADE_ANSWERS.htm
 
 - Providers: AWS `>= 6.0, < 7.0`, helm `>= 2.12, < 3.0` (nested `set {}` syntax), kubectl (gavinbunney) for planted manifests, tls for OIDC.
 - Kube/AWS auth uses `aws eks get-token` via the `AWS_PROFILE` env var, so the same config works locally and in CI (OIDC). Do not hardcode a profile in `backend.tf` or providers.
-- State: S3 bucket `tf-eks-cluster-upgrade-test`, keys `dev|prod|bootstrap/terraform.tfstate`, `use_lockfile = true` (no DynamoDB).
+- State: `backend.tf` is a partial S3 backend - the bucket/region come from `[backend]` in the config and the key (`dev|prod|bootstrap/terraform.tfstate`) is injected per env by `bootstrap.py` at init. `use_lockfile = true` (no DynamoDB). Nothing user-specific is hardcoded.
 - Follow the global markdown rule: one full sentence per line in long Markdown.
 - Config: `scripts/config.toml` (real values) is git-ignored; `scripts/config.example.toml` (documented template) is committed. Do not commit `*.tfstate`, `.terraform/`, `config.auto.tfvars.json`, `*.tfvars`, or `.terraform.lock.hcl` (see `.gitignore`).
 

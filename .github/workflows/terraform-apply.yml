@@ -45,17 +45,8 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: us-east-2
 
-      - name: generate tfvars from config
-        run: python3 scripts/bootstrap.py ${{ inputs.environment }} --generate-only
-
       - name: init
-        run: terraform -chdir=terraform/envs/${{ inputs.environment }} init -input=false
+        run: python3 scripts/bootstrap.py ${{ inputs.environment }} init -input=false
 
       - name: ${{ inputs.action }}
-        run: |
-          cd terraform/envs/${{ inputs.environment }}
-          if [ "${{ inputs.action }}" = "destroy" ]; then
-            terraform destroy -auto-approve -input=false
-          else
-            terraform apply -auto-approve -input=false
-          fi
+        run: python3 scripts/bootstrap.py ${{ inputs.environment }} ${{ inputs.action }} -auto-approve -input=false

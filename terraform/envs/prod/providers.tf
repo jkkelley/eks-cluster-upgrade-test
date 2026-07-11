@@ -1,7 +1,7 @@
 provider "aws" {
   region = var.aws_region
   # Profile is intentionally not set here - it comes from the AWS_PROFILE env var
-  # (your-aws-profile locally via the Makefile; unset in CI where OIDC provides creds).
+  # (your configured profile locally via the Makefile; unset in CI where OIDC provides creds).
 }
 
 # kubectl / helm auth uses the AWS CLI token helper. It inherits AWS_PROFILE / OIDC

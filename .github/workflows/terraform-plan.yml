@@ -42,9 +42,6 @@ jobs:
           terraform -chdir=terraform/envs/${{ matrix.env }} init -backend=false -input=false
           terraform -chdir=terraform/envs/${{ matrix.env }} validate
 
-      - name: generate tfvars from config
-        run: python3 scripts/bootstrap.py ${{ matrix.env }} --generate-only
-
       # --- Real plan needs AWS. Requires the OIDC bootstrap + repo var AWS_ROLE_ARN ---
       - name: AWS credentials (OIDC)
         if: ${{ vars.AWS_ROLE_ARN != '' }}
@@ -58,8 +55,8 @@ jobs:
         if: ${{ vars.AWS_ROLE_ARN != '' }}
         run: |
           set +e
-          terraform -chdir=terraform/envs/${{ matrix.env }} init -input=false
-          terraform -chdir=terraform/envs/${{ matrix.env }} plan -no-color -input=false | tee plan-${{ matrix.env }}.txt
+          python3 scripts/bootstrap.py ${{ matrix.env }} init -input=false
+          python3 scripts/bootstrap.py ${{ matrix.env }} plan -no-color -input=false | tee plan-${{ matrix.env }}.txt
           echo "exit=${PIPESTATUS[1]}" >> "$GITHUB_OUTPUT"
 
       - name: comment plan

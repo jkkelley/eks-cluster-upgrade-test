@@ -1,6 +1,6 @@
 # One-time bootstrap: creates the GitHub Actions OIDC provider + an IAM role the
 # workflows assume (no static AWS keys ever stored in GitHub). Apply this ONCE with
-# admin credentials (AWS_PROFILE=your-aws-profile), then set the repo variable
+# admin credentials (set AWS_PROFILE to your admin profile), then set the repo variable
 # AWS_ROLE_ARN to the role_arn output.
 
 provider "aws" {

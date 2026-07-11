@@ -14,10 +14,15 @@
 # Each line notes a GENERIC default so you know what a sane value looks like.
 # =============================================================================
 
+# Terraform S3 state backend - injected at init time (backend blocks can't take variables).
+[backend]
+bucket = "<your-tf-state-bucket>"   # globally-unique S3 bucket YOU created for state
+region = "us-east-2"                # region the state bucket lives in
+
 [common]
 # ---- identity / region ----
 aws_region  = "us-east-2"          # region for everything;            generic default: "us-east-1"
-aws_profile = "your-aws-profile"    # kubeconfig hint only (auth = AWS_PROFILE env); generic default: "default"
+aws_profile = "default"            # your AWS CLI profile (kubeconfig hint; auth = AWS_PROFILE env); generic default: "default"
 project     = "eks-upgrade"        # name prefix for resources;        generic default: "my-eks"
 
 # ---- the upgrade lever (bump ONE minor at a time: 1.34 -> 1.35 -> 1.36) ----
@@ -90,8 +95,8 @@ enabled_cluster_log_types = ["audit", "api"] # on before a prod upgrade; generic
 
 [bootstrap_oidc]
 aws_region          = "us-east-2"                                       # generic default: "us-east-1"
-github_owner        = "jkkelley"                                        # generic default: "<your-gh-user-or-org>"
-github_repo         = "eks-cluster-upgrade-test"                        # generic default: "<repo-name>"
+github_owner        = "<your-gh-user-or-org>"                           # your GitHub user or org
+github_repo         = "<your-repo>"                                     # the repo name
 role_name           = "gha-eks-upgrade-test"                            # generic default: "gha-<repo>"
 subject_claims      = []                                                # [] = repo:<owner>/<repo>:*; generic default: tighten to a branch/env
 managed_policy_arns = ["arn:aws:iam::aws:policy/AdministratorAccess"]   # generic default: a least-privilege custom policy
