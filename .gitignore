@@ -37,3 +37,7 @@ Thumbs.db
 *.swp
 *~
 .env
+
+# ---- Python ----
+__pycache__/
+*.pyc
