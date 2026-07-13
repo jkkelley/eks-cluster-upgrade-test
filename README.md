@@ -124,6 +124,22 @@ Grade yourself against the answer key.
 
 ---
 
+## Where the gotchas actually come from
+
+Two independent layers plant gotchas here, and it helps to know which is which before you start hunting.
+
+**Terraform / `scripts/config.toml`** - live the moment `make up` finishes, seeded or not.
+Managed add-on versions, the kube-proxy version, and the cluster-autoscaler image tag are pinned or defaulted in a way that is designed to fall behind as the control plane climbs 1.34 -> 1.35 -> 1.36.
+
+**`manifests/`, applied by `make seed`** - four workload-level Kubernetes objects layered on top via `kubectl`.
+A blocking PodDisruptionBudget, a fail-closed admission webhook, a non-canonical CIDR in a NetworkPolicy, and a naked singleton Pod.
+
+Running `make seed` does not touch the Terraform side.
+Skipping `make seed` does not remove the Terraform-driven gotchas either.
+The two layers are independent, and both count toward the full list in the sealed answer key.
+
+---
+
 ## The sealed answer key
 
 [`CLUSTER_UPGRADE_ANSWERS.html`](CLUSTER_UPGRADE_ANSWERS.html) documents **every** gotcha as Who / What / Where / When / Why, plus a detection command, a fix, and the correct order.
