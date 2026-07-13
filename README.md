@@ -24,6 +24,9 @@ There are exactly two ways this gets expensive:
 Other line items to know about: NAT gateway (~$0.045/hr), any LoadBalancer you create (~$16/mo), public IPv4 addresses ($0.005/hr each), and CloudWatch control-plane logs ($0.50/GB, left off by default).
 **Apply one environment at a time** - `dev` and `prod` together means two control planes.
 
+Kubernetes itself can also create AWS resources Terraform doesn't track - EBS volumes from PVCs, and any snapshots you take during the drill.
+`make down` runs `scripts/teardown_orphans.py` before the destroy to delete those (PVCs via kubectl, then a tag-scoped volume/snapshot sweep); snapshots you create must be tagged `Purpose=eks-upgrade-gauntlet` for it to find them.
+
 Nothing here applies to AWS on its own. **You** run every `terraform apply` / `make up`.
 
 ---
