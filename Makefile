@@ -60,6 +60,7 @@ up: apply ## Alias for apply
 
 down: guard-env ## terraform destroy (RUN THIS WHEN DONE to stop charges)
 	$(BOOT) $(ENV) init -input=false
+	-$(PYTHON) scripts/teardown_orphans.py $(ENV)
 	$(BOOT) $(ENV) destroy
 
 output: guard-env ## Show terraform outputs
